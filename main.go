@@ -11,10 +11,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// This time make the models.BookModel a dependency in Env
-
 type Env struct {
-	books models.BookModel
+	// Replace the reference to models.BookModel with an interface
+	// describing its methods instead. All the other code remains exactly
+	// the same.
+	books interface {
+		AllBooks() ([]models.Book, error)
+	}
 }
 
 func main() {
@@ -26,7 +29,7 @@ func main() {
 
 	// Initialize Env with a models.BookModel instance (which in turn wraps the connection pool).
 	env := &Env{
-		books: models.BookModel{DB: db},
+		books: &models.BookModel{DB: db},
 	}
 
 	http.HandleFunc("/books", env.booksIndex)
