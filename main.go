@@ -25,21 +25,23 @@ func main() {
 	// Create an instance of Env containing the db connection pool
 	env := &Env{db: db} // injected the dependency
 
-	http.HandleFunc("/books", env.booksIndex)
+	// Pass the Env struct as a parameter to booksIndex().
+	http.HandleFunc("/books", booksIndex(env))
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-// Define booksIndex as method on Env
+// Use a closure to make Env available to the handler logic.
+func booksIndex(env *Env) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		bks, err := models.AllBooks(env.db)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, http.StatusText(500), 500)
+			return
+		}
 
-func (env *Env) booksIndex(w http.ResponseWriter, _ *http.Request) {
-	bks, err := models.AllBooks(env.db)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, http.StatusText(500), 500)
-		return
-	}
-
-	for _, bk := range bks {
-		_, _ = fmt.Fprintf(w, "%s, %s, %s, £%.2f\n", bk.Isbn, bk.Title, bk.Author, bk.Price)
+		for _, bk := range bks {
+			_, _ = fmt.Fprintf(w, "%s, %s, %s, £%.2f\n", bk.Isbn, bk.Title, bk.Author, bk.Price)
+		}
 	}
 }
