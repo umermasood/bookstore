@@ -12,11 +12,17 @@ type Book struct {
 	Price  float32
 }
 
-// Update the AllBooks function, so it accepts the connection pool as a parameter.
+// Create a custom BookModel type which wraps the sql.DB connection pool.
 
-func AllBooks(db *sql.DB) ([]Book, error) {
-	// Note that we are calling Query() on the global variable.
-	rows, err := db.Query("SELECT * FROM books")
+type BookModel struct {
+	// wraps the db dependency
+	DB *sql.DB
+}
+
+// Use a method on the custom BookModel type to run the SQL query.
+
+func (m *BookModel) AllBooks() ([]Book, error) {
+	rows, err := m.DB.Query("SELECT * FROM books")
 	if err != nil {
 		return nil, err
 	}

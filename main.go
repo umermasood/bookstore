@@ -11,8 +11,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// This time make the models.BookModel a dependency in Env
+
 type Env struct {
-	db *sql.DB
+	books models.BookModel
 }
 
 func main() {
@@ -22,26 +24,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create an instance of Env containing the db connection pool
-	env := &Env{db: db} // injected the dependency
+	// Initialize Env with a models.BookModel instance (which in turn wraps the connection pool).
+	env := &Env{
+		books: models.BookModel{DB: db},
+	}
 
-	// Pass the Env struct as a parameter to booksIndex().
-	http.HandleFunc("/books", booksIndex(env))
+	http.HandleFunc("/books", env.booksIndex)
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-// Use a closure to make Env available to the handler logic.
-func booksIndex(env *Env) http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		bks, err := models.AllBooks(env.db)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, http.StatusText(500), 500)
-			return
-		}
+func (env *Env) booksIndex(w http.ResponseWriter, _ *http.Request) {
+	// Execute the SQL query by calling the AllBooks() method.
+	bks, err := env.books.AllBooks()
+	if err != nil {
+		log.Print(err)
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
 
-		for _, bk := range bks {
-			_, _ = fmt.Fprintf(w, "%s, %s, %s, £%.2f\n", bk.Isbn, bk.Title, bk.Author, bk.Price)
-		}
+	for _, bk := range bks {
+		_, _ = fmt.Fprintf(w, "%s, %s, %s, £%.2f\n", bk.Isbn, bk.Title, bk.Author, bk.Price)
 	}
 }
