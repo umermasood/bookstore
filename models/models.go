@@ -5,9 +5,20 @@ import (
 	"log"
 )
 
-// Create an exported global variable to hold the database connection pool
+// This time the global variable is unexported.
+var db *sql.DB
 
-var DB *sql.DB
+// InitDB sets up the connection pool global variable.
+func InitDB(dataSourceName string) error {
+	var err error
+
+	db, err = sql.Open("postgres", dataSourceName)
+	if err != nil {
+		return err
+	}
+
+	return db.Ping()
+}
 
 type Book struct {
 	Isbn   string
@@ -19,7 +30,7 @@ type Book struct {
 // AllBooks returns a slice of all books in the books table.
 func AllBooks() ([]Book, error) {
 	// Note that we are calling Query() on the global variable.
-	rows, err := DB.Query("SELECT * FROM books")
+	rows, err := db.Query("SELECT * FROM books")
 	if err != nil {
 		return nil, err
 	}

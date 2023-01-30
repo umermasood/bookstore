@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,11 +11,8 @@ import (
 )
 
 func main() {
-	var err error
-
-	// Initialize the sql.DB connection pool and assign it to the models.DB global variable.
-	// temp railway postgres db
-	models.DB, err = sql.Open("postgres", "postgresql://postgres:pTbZBLeksqDVrXotzEag@containers-us-west-33.railway.app:5751/railway")
+	// Use the InitDB function to initialise the global variable.
+	err := models.InitDB("postgresql://postgres:pTbZBLeksqDVrXotzEag@containers-us-west-33.railway.app:5751/railway")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,7 +22,7 @@ func main() {
 }
 
 // booksIndex sends an HTTP response listing all books.
-func booksIndex(w http.ResponseWriter, r *http.Request) {
+func booksIndex(w http.ResponseWriter, _ *http.Request) {
 	bks, err := models.AllBooks()
 	if err != nil {
 		log.Print(err)
