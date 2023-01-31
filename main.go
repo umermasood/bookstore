@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -20,6 +21,16 @@ type Env struct {
 	}
 }
 
+// Create some middleware which swaps out the existing request context
+// with new context.Context value containing the connection pool.
+func injectDB(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), "db", db)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	}
+}
+
 func main() {
 	// Initialize the connection pool
 	db, err := sql.Open("postgres", "postgresql://postgres:pTbZBLeksqDVrXotzEag@containers-us-west-33.railway.app:5751/railway")
@@ -27,18 +38,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize Env with a models.BookModel instance (which in turn wraps the connection pool).
-	env := &Env{
-		books: &models.BookModel{DB: db},
-	}
-
-	http.HandleFunc("/books", env.booksIndex)
+	// Wrap the booksIndex handler with the injectDB middleware,
+	// passing in the new context.Context with the connection pool.
+	http.Handle("/books", injectDB(db, booksIndex))
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-func (env *Env) booksIndex(w http.ResponseWriter, _ *http.Request) {
-	// Execute the SQL query by calling the AllBooks() method.
-	bks, err := env.books.AllBooks()
+func booksIndex(w http.ResponseWriter, r *http.Request) {
+	// Pass the request context onto the database layer.
+	bks, err := models.AllBooks(r.Context())
 	if err != nil {
 		log.Print(err)
 		http.Error(w, http.StatusText(500), 500)

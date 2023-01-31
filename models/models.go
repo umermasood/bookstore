@@ -1,7 +1,9 @@
 package models
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"log"
 )
 
@@ -19,10 +21,16 @@ type BookModel struct {
 	DB *sql.DB
 }
 
-// Use a method on the custom BookModel type to run the SQL query.
+func AllBooks(ctx context.Context) ([]Book, error) {
+	// Retrieve the connection pool from the context. Because the
+	// r.Context().Value() method always returns an interface{} type, we
+	// need to type assert it into a *sql.DB before using it.
+	db, ok := ctx.Value("db").(*sql.DB)
+	if !ok {
+		return nil, errors.New("could not get database connection pool from context")
+	}
 
-func (m *BookModel) AllBooks() ([]Book, error) {
-	rows, err := m.DB.Query("SELECT * FROM books")
+	rows, err := db.Query("SELECT * FROM books")
 	if err != nil {
 		return nil, err
 	}
